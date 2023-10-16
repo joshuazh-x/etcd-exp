@@ -2,6 +2,8 @@ module go.etcd.io/etcd/server/v3
 
 go 1.20
 
+replace go.etcd.io/raft/v3 => github.com/joshuazh-x/raft/v3 v3.0.0-20231016052109-730a130cfb99
+
 require (
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.5.0

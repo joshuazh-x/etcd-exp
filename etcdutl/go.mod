@@ -2,6 +2,8 @@ module go.etcd.io/etcd/etcdutl/v3
 
 go 1.20
 
+replace go.etcd.io/raft/v3 => github.com/joshuazh-x/raft/v3 v3.0.0-20231016052109-730a130cfb99
+
 replace (
 	go.etcd.io/etcd/api/v3 => ../api
 	go.etcd.io/etcd/client/pkg/v3 => ../client/pkg

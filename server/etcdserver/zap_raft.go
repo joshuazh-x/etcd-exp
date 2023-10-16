@@ -23,8 +23,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type RaftLoggerWithStateTracer interface {
+	raft.Logger
+	raft.RaftStateMachineTracer
+}
+
 // NewRaftLogger builds "raft.Logger" from "*zap.Config".
-func NewRaftLogger(lcfg *zap.Config) (raft.Logger, error) {
+func NewRaftLogger(lcfg *zap.Config) (RaftLoggerWithStateTracer, error) {
 	if lcfg == nil {
 		return nil, errors.New("nil zap.Config")
 	}
@@ -35,8 +40,8 @@ func NewRaftLogger(lcfg *zap.Config) (raft.Logger, error) {
 	return &zapRaftLogger{lg: lg, sugar: lg.Sugar()}, nil
 }
 
-// NewRaftLoggerZap converts "*zap.Logger" to "raft.Logger".
-func NewRaftLoggerZap(lg *zap.Logger) raft.Logger {
+// NewRaftLoggerZap converts "*zap.Logger" to "RaftLoggerWithStateTracer".
+func NewRaftLoggerZap(lg *zap.Logger) RaftLoggerWithStateTracer {
 	skipCallerLg := lg.WithOptions(zap.AddCallerSkip(1))
 	return &zapRaftLogger{lg: skipCallerLg, sugar: skipCallerLg.Sugar()}
 }
@@ -100,4 +105,8 @@ func (zl *zapRaftLogger) Panic(args ...interface{}) {
 
 func (zl *zapRaftLogger) Panicf(format string, args ...interface{}) {
 	zl.sugar.Panicf(format, args...)
+}
+
+func (zl *zapRaftLogger) TraceState(ev *raft.TracingEvent) {
+	zl.lg.Debug("", zap.String("tag", "raft_trace"), zap.Any("event", ev))
 }

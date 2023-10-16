@@ -1,6 +1,10 @@
 module go.etcd.io/etcd/tools/v3
 
-go 1.20
+go 1.21
+
+toolchain go1.21.1
+
+replace go.etcd.io/raft/v3 => github.com/joshuazh-x/raft/v3 v3.0.0-20231016052109-730a130cfb99
 
 require (
 	github.com/alexfalkowski/gocovmerge v1.2.0

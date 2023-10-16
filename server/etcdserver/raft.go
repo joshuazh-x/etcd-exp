@@ -119,7 +119,7 @@ type raftNodeConfig struct {
 }
 
 func newRaftNode(cfg raftNodeConfig) *raftNode {
-	var lg raft.Logger
+	var lg RaftLoggerWithStateTracer
 	if cfg.lg != nil {
 		lg = NewRaftLoggerZap(cfg.lg)
 	} else {
@@ -131,6 +131,11 @@ func newRaftNode(cfg raftNodeConfig) *raftNode {
 		}
 	}
 	raft.SetLogger(lg)
+
+	if isStateTracingEnabled() {
+		raft.SetStateTracer(lg)
+	}
+
 	r := &raftNode{
 		lg:             cfg.lg,
 		tickMu:         new(sync.Mutex),
@@ -433,4 +438,10 @@ func (r *raftNode) advanceTicks(ticks int) {
 	for i := 0; i < ticks; i++ {
 		r.tick()
 	}
+}
+
+func isStateTracingEnabled() bool {
+	// gofail: var enableStateTracing bool
+	// return enableStateTracing
+	return false
 }
