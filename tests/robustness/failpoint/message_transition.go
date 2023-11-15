@@ -15,7 +15,7 @@ import (
 var (
 	BlockedTransition   Failpoint = makeMessageTransitionFailpoint("traffic-jam", withTrafficJam("", "", true, time.Millisecond*100))
 	LossyTransition     Failpoint = makeMessageTransitionFailpoint("lossy", withLossyTransition("", "", true, 0.2))
-	RedundantTransition Failpoint = makeMessageTransitionFailpoint("redundant", withRedundantTransition("", "", true, 0.2))
+	RedundantTransition Failpoint = makeMessageTransitionFailpoint("redundant", withRedundantTransition("", "", true, 0.2), withLaggyTransition("", "", true, 0.2, time.Millisecond*100, time.Millisecond*500))
 	// laggy transition may also introduce message reordering
 	LaggyTransition Failpoint = makeMessageTransitionFailpoint("laggy", withLaggyTransition("", "", true, 0.2, time.Millisecond*100, time.Millisecond*500))
 )
