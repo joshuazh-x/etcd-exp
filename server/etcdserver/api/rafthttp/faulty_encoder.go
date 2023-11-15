@@ -1,3 +1,17 @@
+// Copyright 2015 The etcd Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rafthttp
 
 import (
@@ -57,7 +71,8 @@ type FaultStat struct {
 
 var reportFaultStatisticsInterval = time.Second * 10
 
-// config example: 111->222:drop=0.1,delay=0.2:1-3;456:block=2;333<->*:dup:0.2;*:dup=0.05
+// String converts config to string format
+// example: 111->222:drop=0.1,delay=0.2:1-3;456:block=2;333<->*:dup:0.2;*:dup=0.05
 // explain:
 // 1. messages sent from node 111 to node 222 will be dropped with 10% chance, be delayed by 1 to 3 seconds with 20% chance, and be bocked by 2 seconds.
 // 2. messages sent from or to 333, will be duplicated with 20% chance.
@@ -85,7 +100,7 @@ func (fnc *FaultyNetworkConfig) String() string {
 	return strings.Join(cfgStrs, ";")
 }
 
-// parse FaultyNetworkConfig from string.
+// Parse parses FaultyNetworkConfig from string.
 // refer to FaultyNetworkConfig.String() for configure format.
 func (fnc *FaultyNetworkConfig) Parse(str string) error {
 	cfg := FaultyNetworkConfig{}
@@ -347,21 +362,23 @@ type faultyEncoder struct {
 	configStr string
 }
 
-//nolint:unused // This type is used only when gofail is enabled
+//nolint:unused // wrapperCloser is used only when gofail is enabled
 type wrappedCloser struct {
 	fe     *faultyEncoder
 	closer io.Closer
 }
 
-//nolint:unused // This function is used only when gofail is enabled
+// Close closes the faulty encoder followed by attached closer
+//
+//nolint:unused // Close is used only when gofail is enabled
 func (wc *wrappedCloser) Close() error {
 	wc.fe.Close()
 	return wc.closer.Close()
 }
 
-// wrap the given encoder and closer so that specified faults can be applied to the messages
+// wrapEncoderWithFaultyNetwork wraps the given encoder and closer so that specified faults can be applied to the messages
 //
-//nolint:unused // This function is used only when gofail is enabled
+//nolint:unused // wrapEncoderWithFaultyNetwork is used only when gofail is enabled
 func wrapEncoderWithFaultyNetwork(encoder encoder, closer io.Closer, localId types.ID, perrId types.ID, lg *zap.Logger) (encoder, io.Closer) {
 	fe := newFaultyEncoder(encoder, localId, perrId, lg)
 	return fe, &wrappedCloser{fe: fe, closer: closer}
