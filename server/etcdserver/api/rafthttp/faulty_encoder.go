@@ -4,25 +4,27 @@ import (
 	"container/heap"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"go.etcd.io/etcd/client/pkg/v3/types"
 	"go.etcd.io/raft/v3/raftpb"
-	"go.uber.org/zap"
 )
 
 type FaultType int
 
 const (
 	FaultTypeNone       FaultType = 0
-	FaultTypeDropped              = 0x02
-	FaultTypeDuplicated           = 0x04
-	FaultTypeDelayed              = 0x08
-	FaultTypeReordered            = 0x10
-	FaultTypeBlocked              = 0x12
+	FaultTypeDropped    FaultType = 0x02
+	FaultTypeDuplicated FaultType = 0x04
+	FaultTypeDelayed    FaultType = 0x08
+	FaultTypeReordered  FaultType = 0x10
+	FaultTypeBlocked    FaultType = 0x12
 )
 
 type FaultyNetworkFaultConfig struct {
@@ -53,7 +55,7 @@ type FaultStat struct {
 	Reordered  uint64 `json:"reordered,omitempty"`
 }
 
-var reportFaultStatisticsInterval time.Duration = time.Second * 10
+var reportFaultStatisticsInterval = time.Second * 10
 
 // config example: 111->222:drop=0.1,delay=0.2:1-3;456:block=2;333<->*:dup:0.2;*:dup=0.05
 // explain:
@@ -345,17 +347,21 @@ type faultyEncoder struct {
 	configStr string
 }
 
+//nolint:unused // This type is used only when gofail is enabled
 type wrappedCloser struct {
 	fe     *faultyEncoder
 	closer io.Closer
 }
 
+//nolint:unused // This function is used only when gofail is enabled
 func (wc *wrappedCloser) Close() error {
 	wc.fe.Close()
 	return wc.closer.Close()
 }
 
 // wrap the given encoder and closer so that specified faults can be applied to the messages
+//
+//nolint:unused // This function is used only when gofail is enabled
 func wrapEncoderWithFaultyNetwork(encoder encoder, closer io.Closer, localId types.ID, perrId types.ID, lg *zap.Logger) (encoder, io.Closer) {
 	fe := newFaultyEncoder(encoder, localId, perrId, lg)
 	return fe, &wrappedCloser{fe: fe, closer: closer}
@@ -463,9 +469,9 @@ func (fe *faultyEncoder) getEffectiveConfig(cfg FaultyNetworkConfig) *FaultyNetw
 	for tr, p := range cfg {
 		if ((fe.localId == tr.From || tr.From == 0) || ((fe.localId == tr.To || tr.To == 0) && tr.Duplex)) &&
 			((fe.peerId == tr.To || tr.To == 0) || ((fe.peerId == tr.From || tr.From == 0) && tr.Duplex)) {
-			fc.BlockInSecond = max(fc.BlockInSecond, p.BlockInSecond)
-			fc.DuplicateProbability = max(fc.DuplicateProbability, p.DuplicateProbability)
-			fc.DropPropability = max(fc.DropPropability, p.DropPropability)
+			fc.BlockInSecond = math.Max(fc.BlockInSecond, p.BlockInSecond)
+			fc.DuplicateProbability = math.Max(fc.DuplicateProbability, p.DuplicateProbability)
+			fc.DropPropability = math.Max(fc.DropPropability, p.DropPropability)
 			if p.DelayProbability > fc.DelayProbability {
 				fc.DelayProbability = p.DelayProbability
 				fc.MinDelayInSecond = p.MinDelayInSecond

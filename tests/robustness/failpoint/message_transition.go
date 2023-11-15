@@ -3,21 +3,23 @@ package failpoint
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	"go.etcd.io/etcd/server/v3/etcdserver/api/rafthttp"
 	"go.etcd.io/etcd/tests/v3/framework/e2e"
-	"go.uber.org/zap"
 )
 
 var (
-	BlockedTransition   Failpoint = makeMessageTransitionFailpoint("traffic-jam", withTrafficJam("", "", true, time.Millisecond*100))
-	LossyTransition     Failpoint = makeMessageTransitionFailpoint("lossy", withLossyTransition("", "", true, 0.2))
-	RedundantTransition Failpoint = makeMessageTransitionFailpoint("redundant", withRedundantTransition("", "", true, 0.2), withLaggyTransition("", "", true, 0.2, time.Millisecond*100, time.Millisecond*500))
+	BlockedTransition   = makeMessageTransitionFailpoint("traffic-jam", withTrafficJam("", "", true, time.Millisecond*100))
+	LossyTransition     = makeMessageTransitionFailpoint("lossy", withLossyTransition("", "", true, 0.2))
+	RedundantTransition = makeMessageTransitionFailpoint("redundant", withRedundantTransition("", "", true, 0.2), withLaggyTransition("", "", true, 0.2, time.Millisecond*100, time.Millisecond*500))
 	// laggy transition may also introduce message reordering
-	LaggyTransition Failpoint = makeMessageTransitionFailpoint("laggy", withLaggyTransition("", "", true, 0.2, time.Millisecond*100, time.Millisecond*500))
+	LaggyTransition = makeMessageTransitionFailpoint("laggy", withLaggyTransition("", "", true, 0.2, time.Millisecond*100, time.Millisecond*500))
 )
 
 // define transport between named nodes.
@@ -141,9 +143,9 @@ func withFaultConfig(from string, to string, duplex bool, fc rafthttp.FaultyNetw
 		found := false
 		for _, tr := range validTr {
 			if f, ok := (*cfg)[tr]; ok {
-				f.BlockInSecond = max(f.BlockInSecond, fc.BlockInSecond)
-				f.DropPropability = max(f.DropPropability, fc.DropPropability)
-				f.DuplicateProbability = max(f.DuplicateProbability, fc.DuplicateProbability)
+				f.BlockInSecond = math.Max(f.BlockInSecond, fc.BlockInSecond)
+				f.DropPropability = math.Max(f.DropPropability, fc.DropPropability)
+				f.DuplicateProbability = math.Max(f.DuplicateProbability, fc.DuplicateProbability)
 				if f.DelayProbability < fc.DelayProbability {
 					f.DelayProbability = fc.DelayProbability
 					f.MinDelayInSecond = fc.MinDelayInSecond
@@ -179,7 +181,7 @@ func withRedundantTransition(from string, to string, duplex bool, p float64) mes
 func withLaggyTransition(from string, to string, duplex bool, p float64, minDelay time.Duration, maxDelay time.Duration) messageTransitionFailpointOption {
 	return withFaultConfig(from, to, duplex, rafthttp.FaultyNetworkFaultConfig{
 		DelayProbability: p,
-		MinDelayInSecond: maxDelay.Seconds(),
+		MinDelayInSecond: minDelay.Seconds(),
 		MaxDelayInSecond: maxDelay.Seconds(),
 	})
 }

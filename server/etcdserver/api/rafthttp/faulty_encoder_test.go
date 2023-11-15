@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	"go.etcd.io/etcd/client/pkg/v3/types"
 	"go.etcd.io/raft/v3/raftpb"
-	"go.uber.org/zap"
 )
 
 type testEncoder struct {
@@ -192,7 +193,7 @@ func TestFaultyEncoderWithBlockedNetwork(t *testing.T) {
 func TestFaultyEncoderWithLossyNetwork(t *testing.T) {
 	tr := FaultyNetworkTransport{
 		From: 0,
-		To:   1,
+		To:   2,
 	}
 	cfg := FaultyNetworkConfig{
 		tr: FaultyNetworkFaultConfig{
@@ -200,7 +201,7 @@ func TestFaultyEncoderWithLossyNetwork(t *testing.T) {
 		},
 	}
 
-	result := runWithConfig(t, cfg, 20, 0, 1) // 99% confidence level
+	result := runWithConfig(t, cfg, 20, 0, 2) // 99% confidence level
 	if !result.hasDropped() {
 		t.Error("some messages shall be dropped")
 	}
