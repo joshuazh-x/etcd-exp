@@ -51,6 +51,8 @@ import (
 	"go.etcd.io/raft/v3/raftpb"
 )
 
+const ENV_TRACE_RAFT_STATE = "ETCD_TRACE_RAFT_STATE"
+
 func bootstrap(cfg config.ServerConfig) (b *bootstrappedServer, err error) {
 	if cfg.MaxRequestBytes > recommendedMaxRequestBytes {
 		cfg.Logger.Warn(
@@ -515,6 +517,14 @@ func bootstrapRaftFromWAL(cfg config.ServerConfig, bwal *bootstrappedWAL) *boots
 	}
 }
 
+func getRaftStateTracer() raft.RaftStateMachineTracer {
+	if v, exist := os.LookupEnv(ENV_TRACE_RAFT_STATE); exist && len(v) > 0 {
+		return NewRaftStateTracer(v)
+	}
+
+	return nil
+}
+
 func raftConfig(cfg config.ServerConfig, id uint64, s *raft.MemoryStorage) *raft.Config {
 	return &raft.Config{
 		ID:              id,
@@ -526,6 +536,7 @@ func raftConfig(cfg config.ServerConfig, id uint64, s *raft.MemoryStorage) *raft
 		CheckQuorum:     true,
 		PreVote:         cfg.PreVote,
 		Logger:          NewRaftLoggerZap(cfg.Logger.Named("raft")),
+		StateTracer:     getRaftStateTracer(),
 	}
 }
 

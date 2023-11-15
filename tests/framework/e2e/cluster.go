@@ -34,6 +34,7 @@ import (
 	"go.etcd.io/etcd/pkg/v3/proxy"
 	"go.etcd.io/etcd/server/v3/etcdserver"
 	"go.etcd.io/etcd/tests/v3/framework/config"
+	"go.etcd.io/etcd/tests/v3/framework/testutils"
 )
 
 const EtcdProcessBasePort = 20000
@@ -193,6 +194,8 @@ type EtcdProcessClusterConfig struct {
 	ExperimentalWarningUnaryRequestDuration time.Duration
 	PeerProxy                               bool
 	WatchProcessNotifyInterval              time.Duration
+
+	RaftStateTraceFilename string
 }
 
 func DefaultConfig() *EtcdProcessClusterConfig {
@@ -401,6 +404,8 @@ func InitEtcdProcessCluster(t testing.TB, cfg *EtcdProcessClusterConfig) (*EtcdP
 	if cfg.SnapshotCount == 0 {
 		cfg.SnapshotCount = etcdserver.DefaultSnapshotCount
 	}
+
+	cfg.RaftStateTraceFilename = testutils.GetRaftStateTraceFilename(t)
 
 	etcdCfgs := cfg.EtcdAllServerProcessConfigs(t)
 	epc := &EtcdProcessCluster{
@@ -615,6 +620,7 @@ func (cfg *EtcdProcessClusterConfig) EtcdServerProcessConfig(tb testing.TB, i in
 			args = append(args, "--experimental-snapshot-catchup-entries", fmt.Sprintf("%d", cfg.SnapshotCatchUpEntries))
 		}
 	}
+
 	envVars := map[string]string{}
 	for key, value := range cfg.EnvVars {
 		envVars[key] = value
@@ -623,6 +629,10 @@ func (cfg *EtcdProcessClusterConfig) EtcdServerProcessConfig(tb testing.TB, i in
 	if cfg.GoFailEnabled {
 		gofailPort = (i+1)*10000 + 2381
 		envVars["GOFAIL_HTTP"] = fmt.Sprintf("127.0.0.1:%d", gofailPort)
+	}
+
+	if len(cfg.RaftStateTraceFilename) > 0 {
+		envVars[etcdserver.ENV_TRACE_RAFT_STATE] = cfg.RaftStateTraceFilename
 	}
 
 	var execPath string
@@ -971,6 +981,7 @@ func (epc *EtcdProcessCluster) Close() error {
 			err = cerr
 		}
 	}
+	testutils.CompressRaftStateTraceFile(epc.Cfg.RaftStateTraceFilename)
 	epc.lg.Info("closed test cluster.")
 	return err
 }

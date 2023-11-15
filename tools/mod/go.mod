@@ -4,7 +4,9 @@ go 1.21
 
 toolchain go1.21.1
 
-replace go.etcd.io/raft/v3 => github.com/joshuazh-x/raft/v3 v3.0.0-20231016052109-730a130cfb99
+replace go.etcd.io/raft/v3 => github.com/joshuazh-x/raft/v3 v3.0.0-20231115022934-f55da234c07b
+
+//replace go.etcd.io/raft/v3 => /home/joshuazh/repo/raft
 
 require (
 	github.com/alexfalkowski/gocovmerge v1.2.0

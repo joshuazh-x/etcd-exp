@@ -17,19 +17,15 @@ package etcdserver
 import (
 	"errors"
 
+	"go.etcd.io/etcd/client/pkg/v3/logutil"
 	"go.etcd.io/raft/v3"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-type RaftLoggerWithStateTracer interface {
-	raft.Logger
-	raft.RaftStateMachineTracer
-}
-
 // NewRaftLogger builds "raft.Logger" from "*zap.Config".
-func NewRaftLogger(lcfg *zap.Config) (RaftLoggerWithStateTracer, error) {
+func NewRaftLogger(lcfg *zap.Config) (raft.Logger, error) {
 	if lcfg == nil {
 		return nil, errors.New("nil zap.Config")
 	}
@@ -40,8 +36,8 @@ func NewRaftLogger(lcfg *zap.Config) (RaftLoggerWithStateTracer, error) {
 	return &zapRaftLogger{lg: lg, sugar: lg.Sugar()}, nil
 }
 
-// NewRaftLoggerZap converts "*zap.Logger" to "RaftLoggerWithStateTracer".
-func NewRaftLoggerZap(lg *zap.Logger) RaftLoggerWithStateTracer {
+// NewRaftLoggerZap converts "*zap.Logger" to "raft.Logger".
+func NewRaftLoggerZap(lg *zap.Logger) raft.Logger {
 	skipCallerLg := lg.WithOptions(zap.AddCallerSkip(1))
 	return &zapRaftLogger{lg: skipCallerLg, sugar: skipCallerLg.Sugar()}
 }
@@ -107,6 +103,23 @@ func (zl *zapRaftLogger) Panicf(format string, args ...interface{}) {
 	zl.sugar.Panicf(format, args...)
 }
 
-func (zl *zapRaftLogger) TraceState(ev *raft.TracingEvent) {
-	zl.lg.Debug("", zap.String("tag", "raft_trace"), zap.Any("event", ev))
+func NewRaftStateTracer(output string) raft.RaftStateMachineTracer {
+	lcfg := logutil.DefaultZapLoggerConfig
+	lcfg.OutputPaths = []string{output}
+	lcfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	lcfg.Sampling = nil
+	lg, err := lcfg.Build()
+	if err != nil {
+		return nil
+	}
+
+	return &zapRaftStateTracer{lg: lg}
+}
+
+type zapRaftStateTracer struct {
+	lg *zap.Logger
+}
+
+func (zt *zapRaftStateTracer) TraceState(ev *raft.TracingEvent) {
+	zt.lg.Debug("raft trace", zap.String("tag", "raft_trace"), zap.Any("event", ev))
 }
